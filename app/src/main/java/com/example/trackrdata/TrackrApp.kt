@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,11 +56,20 @@ fun TrackrApp(
 
     val locations by trackingViewModel.locations.collectAsStateWithLifecycle()
     val visits by trackingViewModel.visits.collectAsStateWithLifecycle()
+
     val departureError by trackingViewModel.departureError.collectAsStateWithLifecycle()
+
+    // UI State tracking
     val locationEntry by trackingViewModel.locationEntry.collectAsStateWithLifecycle()
     val visitEntry by trackingViewModel.visitEntry.collectAsStateWithLifecycle()
     val tracking by trackingViewModel.tracking.collectAsStateWithLifecycle()
 
+    // User location tracking
+    val trackingSamples by trackingViewModel.trackingSamples.collectAsStateWithLifecycle()
+    val visibleSamples = trackingSamples.filter { it.sessionId == tracking.sessionId }
+    val visitCandidate by trackingViewModel.visitCandidate.collectAsStateWithLifecycle()
+
+    // Navigation
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
@@ -124,10 +134,31 @@ fun TrackrApp(
                         onStop = trackingViewModel::stopTracking
                     )
 
+                    val candidate = visitCandidate
+
+                    if (tracking.isTracking && candidate != null) {
+                        val place = locations.firstOrNull { it.uid == candidate.locationId }
+
+                        if (place != null) {
+                            val observedSeconds =
+                                (candidate.lastObservedAt - candidate.firstObservedAt) / 1000
+
+                            Text(
+                                text = if (candidate.isConfirmed) {
+                                    "Visit detected near ${place.name}"
+                                } else {
+                                    "Checking ${place.name}: $observedSeconds seconds"
+                                },
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+
                     MapScreen(
                         map = map,
                         locations = locations,
                         visits = visits,
+                        samples = visibleSamples,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

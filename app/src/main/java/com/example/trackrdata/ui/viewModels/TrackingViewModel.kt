@@ -10,12 +10,19 @@ import com.example.trackrdata.data.repositories.TrackingRepository
 import com.example.trackrdata.ui.screens.LocationEntryUiState
 import com.example.trackrdata.ui.screens.TrackingUiState
 import com.example.trackrdata.ui.screens.VisitEntryUiState
+import com.example.trackrdata.utils.VisitCandidate
+import com.example.trackrdata.utils.VisitDetector
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -24,10 +31,10 @@ class TrackingViewModel(
     private val repository: TrackingRepository,
     private val currentLocationProvider: CurrentLocationProvider
 ) : ViewModel() {
-
     private val _departureError = MutableStateFlow<String?>(null)
     val departureError = _departureError.asStateFlow()
 
+    // UI state trackers
     private val _locationEntry = MutableStateFlow(LocationEntryUiState())
     val locationEntry = _locationEntry.asStateFlow()
 
@@ -36,6 +43,10 @@ class TrackingViewModel(
 
     private val _tracking = MutableStateFlow(TrackingUiState())
     val tracking = _tracking.asStateFlow()
+
+    // Visit detection
+    private val _visitCandidate = MutableStateFlow<VisitCandidate?>(null)
+    val visitCandidate = _visitCandidate.asStateFlow()
 
     private var trackingJob: Job? = null
 
@@ -52,6 +63,24 @@ class TrackingViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val trackingSamples: StateFlow<List<LocationSample>> =
+        tracking
+            .map { it.sessionId }
+            .distinctUntilChanged()
+            .flatMapLatest { sessionId ->
+                if (sessionId == null) {
+                    flowOf(emptyList<LocationSample>())
+                } else {
+                    repository.getLocationSamplesStream(sessionId)
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
 
     fun addCurrentLocation(name: String) {
         val current = _locationEntry.value
@@ -170,6 +199,9 @@ class TrackingViewModel(
 
         val sessionId = UUID.randomUUID().mostSignificantBits
 
+        val detector = VisitDetector()
+        _visitCandidate.value = null
+
         _tracking.value = TrackingUiState(
             isTracking = true,
             sessionId = sessionId,
@@ -180,19 +212,20 @@ class TrackingViewModel(
             try {
                 currentLocationProvider.observeCoordinates()
                     .collect { coordinates ->
-                        repository.insertLocationSample(
-                            LocationSample(
-                                sessionId = sessionId,
-                                latitude = coordinates.latitude,
-                                longitude = coordinates.longitude,
-                                accuracyMeters = coordinates.accuracyMeters,
-                                recordedAt = coordinates.measuredAt
-                            )
+                        val sample = LocationSample(
+                            sessionId = sessionId,
+                            latitude = coordinates.latitude,
+                            longitude = coordinates.longitude,
+                            accuracyMeters = coordinates.accuracyMeters,
+                            recordedAt = System.currentTimeMillis()
                         )
 
+                        repository.insertLocationSample(sample)
+
+                        _visitCandidate.value = detector.process(sample, locations.value)
+
                         _tracking.value = _tracking.value.copy(
-                            samplesRecorded =
-                                _tracking.value.samplesRecorded + 1,
+                            samplesRecorded = _tracking.value.samplesRecorded + 1,
                             lastCoordinates = coordinates,
                             message = null
                         )
