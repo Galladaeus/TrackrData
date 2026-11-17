@@ -11,6 +11,7 @@ import com.example.trackrdata.ui.screens.LocationEntryUiState
 import com.example.trackrdata.ui.screens.TrackingUiState
 import com.example.trackrdata.ui.screens.VisitEntryUiState
 import com.example.trackrdata.utils.VisitCandidate
+import com.example.trackrdata.utils.VisitDetectionState
 import com.example.trackrdata.utils.VisitDetector
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,8 +46,8 @@ class TrackingViewModel(
     val tracking = _tracking.asStateFlow()
 
     // Visit detection
-    private val _visitCandidate = MutableStateFlow<VisitCandidate?>(null)
-    val visitCandidate = _visitCandidate.asStateFlow()
+    private val _visitDetection = MutableStateFlow(VisitDetectionState())
+    val visitDetection = _visitDetection.asStateFlow()
 
     private var trackingJob: Job? = null
 
@@ -200,7 +201,7 @@ class TrackingViewModel(
         val sessionId = UUID.randomUUID().mostSignificantBits
 
         val detector = VisitDetector()
-        _visitCandidate.value = null
+        _visitDetection.value = VisitDetectionState()
 
         _tracking.value = TrackingUiState(
             isTracking = true,
@@ -217,12 +218,12 @@ class TrackingViewModel(
                             latitude = coordinates.latitude,
                             longitude = coordinates.longitude,
                             accuracyMeters = coordinates.accuracyMeters,
-                            recordedAt = System.currentTimeMillis()
+                            recordedAt = coordinates.measuredAt
                         )
 
                         repository.insertLocationSample(sample)
 
-                        _visitCandidate.value = detector.process(sample, locations.value)
+                        _visitDetection.value = detector.process(sample, locations.value)
 
                         _tracking.value = _tracking.value.copy(
                             samplesRecorded = _tracking.value.samplesRecorded + 1,

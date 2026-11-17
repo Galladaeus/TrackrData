@@ -67,7 +67,7 @@ fun TrackrApp(
     // User location tracking
     val trackingSamples by trackingViewModel.trackingSamples.collectAsStateWithLifecycle()
     val visibleSamples = trackingSamples.filter { it.sessionId == tracking.sessionId }
-    val visitCandidate by trackingViewModel.visitCandidate.collectAsStateWithLifecycle()
+    val visitDetection by trackingViewModel.visitDetection.collectAsStateWithLifecycle()
 
     // Navigation
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -84,7 +84,7 @@ fun TrackrApp(
             )
         },
         bottomBar = {
-            NavigationBar() {
+            NavigationBar {
                 AppDestination.entries.forEach { destination ->
                     val destinationIcon = when (destination) {
                         AppDestination.Map -> Icons.Default.Place
@@ -134,23 +134,40 @@ fun TrackrApp(
                         onStop = trackingViewModel::stopTracking
                     )
 
-                    val candidate = visitCandidate
+                    if (tracking.isTracking) {
+                        val active = visitDetection.activeVisit
+                        val candidate = visitDetection.candidate
 
-                    if (tracking.isTracking && candidate != null) {
-                        val place = locations.firstOrNull { it.uid == candidate.locationId }
+                        val detectionText = when {
+                            active?.outsideSince != null -> {
+                                "Checking departure from ${active.location.name}..."
+                            }
 
-                        if (place != null) {
-                            val observedSeconds =
-                                (candidate.lastObservedAt - candidate.firstObservedAt) / 1000
+                            active != null -> {
+                                "Active detected visit: ${active.location.name}"
+                            }
 
-                            Text(
-                                text = if (candidate.isConfirmed) {
-                                    "Visit detected near ${place.name}"
-                                } else {
-                                    "Checking ${place.name}: $observedSeconds seconds"
-                                },
-                                modifier = Modifier.padding(8.dp)
-                            )
+                            candidate != null -> {
+                                val place = locations.firstOrNull { it.uid == candidate.locationId }
+                                val seconds = (candidate.lastObservedAt - candidate.firstObservedAt) / 1000
+
+                                "Checking arrival near ${place?.name ?: "saved place"}: ${seconds}s..."
+                            }
+
+                            else -> "No visit detected."
+                        }
+
+                        Text(
+                            text = detectionText,
+                            modifier = Modifier.padding(8.dp)
+                        )
+
+                        if (active?.hasObservationGap == true) { Text("Some observations were missing or inaccurate") }
+
+                        visitDetection.lastDeparture?.let { departure ->
+                            val place = locations.firstOrNull { it.uid == departure.locationId }
+
+                            Text("Last confirmed departure ${place?.name ?: "saved place"}")
                         }
                     }
 
