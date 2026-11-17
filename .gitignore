@@ -1,0 +1,35 @@
+# Gradle and Kotlin caches
+.gradle/
+.kotlin/
+
+# Build output from all modules
+build/
+
+# Machine-specific Android SDK location
+local.properties
+
+# Android Studio user-specific files
+*.iml
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+
+# Native build output
+.externalNativeBuild/
+.cxx/
+
+# Captures
+captures/
+
+# Signing keys and credentials
+*.jks
+*.keystore
+keystore.properties
+
+# OS files
+.DS_Store
+Thumbs.db

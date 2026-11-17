@@ -1,0 +1,217 @@
+package com.example.trackrdata.ui.viewModels
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.trackrdata.data.entities.Location
+import com.example.trackrdata.data.entities.LocationSample
+import com.example.trackrdata.data.entities.Visit
+import com.example.trackrdata.data.location.CurrentLocationProvider
+import com.example.trackrdata.data.repositories.TrackingRepository
+import com.example.trackrdata.ui.screens.LocationEntryUiState
+import com.example.trackrdata.ui.screens.TrackingUiState
+import com.example.trackrdata.ui.screens.VisitEntryUiState
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.util.UUID
+
+class TrackingViewModel(
+    private val repository: TrackingRepository,
+    private val currentLocationProvider: CurrentLocationProvider
+) : ViewModel() {
+
+    private val _departureError = MutableStateFlow<String?>(null)
+    val departureError = _departureError.asStateFlow()
+
+    private val _locationEntry = MutableStateFlow(LocationEntryUiState())
+    val locationEntry = _locationEntry.asStateFlow()
+
+    private val _visitEntry = MutableStateFlow(VisitEntryUiState())
+    val visitEntry = _visitEntry.asStateFlow()
+
+    private val _tracking = MutableStateFlow(TrackingUiState())
+    val tracking = _tracking.asStateFlow()
+
+    private var trackingJob: Job? = null
+
+    val locations: StateFlow<List<Location>> =
+        repository.getAllLocationsStream().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    val visits: StateFlow<List<Visit>> =
+        repository.getAllVisitsStream().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    fun addCurrentLocation(name: String) {
+        val current = _locationEntry.value
+        if (current.isCapturing || current.isSaving) return
+
+        val trimmedName = name.trim()
+
+        if (trimmedName.isBlank()) {
+            _locationEntry.value = current.copy(
+                message = "Enter a location name first."
+            )
+            return
+        }
+
+        _locationEntry.value = current.copy(
+            coordinates = null,
+            isCapturing = true,
+            isSaving = false,
+            message = null
+        )
+
+        viewModelScope.launch {
+            try {
+                val coordinates = currentLocationProvider.getCurrentCoordinates()
+
+                if (coordinates == null) {
+                    _locationEntry.value = _locationEntry.value.copy(
+                        message = "No location found. Check that device Location is on."
+                    )
+                    return@launch
+                }
+
+                _locationEntry.value = _locationEntry.value.copy(
+                    isCapturing = true,
+                    isSaving = true
+                )
+
+                repository.insertLocation(
+                    Location(
+                        name = trimmedName,
+                        latitude = coordinates.latitude,
+                        longitude = coordinates.longitude,
+                        category = "User Location",
+                        address = "",
+                        notes = "",
+                        externalId = ""
+                    )
+                )
+
+                _locationEntry.value = _locationEntry.value.copy(
+                    message = "Location saved."
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _locationEntry.value = _locationEntry.value.copy(
+                    message = "Could not save location. Check device permissions."
+                )
+            } finally {
+                _locationEntry.value = _locationEntry.value.copy(
+                    isCapturing = false,
+                    isSaving = false
+                )
+            }
+        }
+    }
+
+    fun startVisit(locationId: Int) {
+        if (_visitEntry.value.isSaving) return
+
+        _visitEntry.value = VisitEntryUiState(
+            isSaving = true
+        )
+
+        viewModelScope.launch {
+            try {
+                repository.recordVisit(locationId)
+
+                _visitEntry.value = _visitEntry.value.copy(
+                    message = "Visit started."
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _visitEntry.value = _visitEntry.value.copy(
+                    message = "Could not start visit. Please try again."
+                )
+            } finally {
+                _visitEntry.value = _visitEntry.value.copy(
+                    isSaving = false
+                )
+            }
+        }
+    }
+
+    fun endVisit(visitId: Int) {
+        viewModelScope.launch {
+            val departedAt = System.currentTimeMillis()
+
+            viewModelScope.launch {
+                _departureError.value = null
+
+                try {
+                    repository.endVisit(visitId, departedAt)
+                } catch (e: CancellationException) {
+                  throw e
+                } catch (e: Exception) {
+                    _departureError.value = "Could not save departure. Please try again."
+                }
+            }
+        }
+    }
+
+    fun startTracking() {
+        if (trackingJob?.isCompleted == false) return
+
+        val sessionId = UUID.randomUUID().mostSignificantBits
+
+        _tracking.value = TrackingUiState(
+            isTracking = true,
+            sessionId = sessionId,
+            message = "Waiting for a location..."
+        )
+
+        trackingJob = viewModelScope.launch {
+            try {
+                currentLocationProvider.observeCoordinates()
+                    .collect { coordinates ->
+                        repository.insertLocationSample(
+                            LocationSample(
+                                sessionId = sessionId,
+                                latitude = coordinates.latitude,
+                                longitude = coordinates.longitude,
+                                accuracyMeters = coordinates.accuracyMeters,
+                                recordedAt = coordinates.measuredAt
+                            )
+                        )
+
+                        _tracking.value = _tracking.value.copy(
+                            samplesRecorded =
+                                _tracking.value.samplesRecorded + 1,
+                            lastCoordinates = coordinates,
+                            message = null
+                        )
+                    }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _tracking.value = _tracking.value.copy(
+                    message = "Tracking stopped because of an error."
+                )
+            } finally {
+                _tracking.value = _tracking.value.copy(
+                    isTracking = false
+                )
+            }
+        }
+    }
+
+    fun stopTracking() {
+        trackingJob?.cancel()
+    }
+}
