@@ -21,6 +21,7 @@ navigationCompose = "2.10.2"
 
 playServicesLocation = "21.3.0"
 coroutinesPlayServices = "1.10.2"
+uiGraphics = "1.12.1"
 
 
 [libraries]
@@ -55,6 +56,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 
 google-play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 
 
 [plugins]

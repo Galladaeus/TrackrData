@@ -3,6 +3,7 @@ package com.example.trackrdata.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,11 +13,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -70,103 +73,123 @@ fun VisitsScreen(
         }.toSortedMap(compareByDescending<LocalDate> { it })
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Visits",
-            style = MaterialTheme.typography.headlineLarge
-        )
-
-        Text(
-            text = "Visit History",
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Box {
-            OutlinedButton(
-                onClick = { locationMenuExpanded = true },
-                enabled = locations.isNotEmpty() && !entryState.isSaving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(selectedLocation?.name ?: "Select Location")
-            }
-
-            DropdownMenu(
-                expanded = locationMenuExpanded,
-                onDismissRequest = { locationMenuExpanded = false }
-            ) {
-                locations.forEach { location ->
-                    DropdownMenuItem(
-                        text = { Text(location.name) },
-                        onClick = {
-                            selectedLocationId = location.uid
-                            locationMenuExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        Button(
-            enabled = selectedLocation != null && !entryState.isSaving,
-            onClick = {
-                selectedLocation?.let { location ->
-                    onStartVisit(location.uid)
-                }
-            }
-        ) {
-            Text(
-                if (entryState.isSaving) {
-                    "Starting visit..."
-                } else {
-                    "Start visit"
-                }
-            )
-        }
-
-        if (locations.isEmpty()) {
-            Text("Save a location on the Locations tab first.")
-        }
-
-        entryState.message?.let { message ->
-            Text(message)
-        }
-
-        if (departureError != null) {
-            Text(
-                text = departureError,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
-        if (visits.isEmpty()) {
-            Text("No visits yet.")
-        }
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            visitsByDate.forEach { (date, visitsForDate) ->
-                item(key = "date_$date") {
-                    VisitDateHeader(date = date)
+            Text(
+                text = "Visits",
+                style = MaterialTheme.typography.headlineLarge
+            )
+
+            Text(
+                text = "Visit History",
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+            Box {
+                OutlinedButton(
+                    onClick = { locationMenuExpanded = true },
+                    enabled = locations.isNotEmpty() && !entryState.isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(selectedLocation?.name ?: "Select Location")
                 }
 
-                items(
-                    items = visitsForDate,
-                    key = { visit -> "visit_${visit.uid}" }
-                ) { visit ->
-                    VisitCard(
-                        visit = visit,
-                        onEndVisit = { onEndVisit(visit.uid) }
-                    )
+                DropdownMenu(
+                    expanded = locationMenuExpanded,
+                    onDismissRequest = { locationMenuExpanded = false }
+                ) {
+                    locations.forEach { location ->
+                        DropdownMenuItem(
+                            text = { Text(location.name) },
+                            onClick = {
+                                selectedLocationId = location.uid
+                                locationMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (locations.isEmpty()) {
+                Text("Save a location on the Locations tab first.")
+            }
+
+            entryState.message?.let { message ->
+                Text(message)
+            }
+
+            if (departureError != null) {
+                Text(
+                    text = departureError,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            if (visits.isEmpty()) {
+                Text("No visits yet.")
+            }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                visitsByDate.forEach { (date, visitsForDate) ->
+                    item(key = "date_$date") {
+                        VisitDateHeader(date = date)
+                    }
+
+                    items(
+                        items = visitsForDate,
+                        key = { visit -> "visit_${visit.uid}" }
+                    ) { visit ->
+                        VisitCard(
+                            visit = visit,
+                            onEndVisit = { onEndVisit(visit.uid) }
+                        )
+                    }
                 }
             }
         }
+
+        ExtendedFloatingActionButton(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            onClick = {
+                if (!entryState.isSaving) {
+                    val location = selectedLocation
+
+                    if (location != null) {
+                        onStartVisit(location.uid)
+                    } else if (locations.isNotEmpty()) {
+                        locationMenuExpanded = true
+                    }
+                }
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
+            },
+            text = {
+                Text(
+                    if (entryState.isSaving) {
+                        "Starting visit..."
+                    } else {
+                        "Start visit"
+                    }
+                )
+            }
+        )
     }
 }
 

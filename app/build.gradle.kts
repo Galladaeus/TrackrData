@@ -13,6 +13,9 @@ val localProperties = Properties().apply {
 val arcgisApiKey = localProperties.getProperty("ARCGIS_API_KEY")
     ?: error("Missing ARCGIS_API_KEY in local.properties")
 
+val arcgisLicenseKey = localProperties.getProperty("ARCGIS_LICENSE_KEY")
+    ?: error("Missing ARCGIS_LICENSE_KEY in local.properties")
+
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -27,6 +30,7 @@ android {
         applicationId = "com.example.trackrdata"
 
         buildConfigField("String", "ARCGIS_API_KEY", "\"$arcgisApiKey\"")
+        buildConfigField("String", "ARCGIS_LICENSE_KEY", "\"$arcgisLicenseKey\"")
 
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
@@ -67,6 +71,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.ui.graphics)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

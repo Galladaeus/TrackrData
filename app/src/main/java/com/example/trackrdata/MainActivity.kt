@@ -6,18 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.arcgismaps.ApiKey
 import com.arcgismaps.ArcGISEnvironment
+import com.arcgismaps.LicenseKey
+import com.arcgismaps.exceptions.LicensingException
 import com.example.trackrdata.ui.theme.TrackrDataTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        ArcGISEnvironment.apiKey = ApiKey.create(BuildConfig.ARCGIS_API_KEY)
-
         enableEdgeToEdge()
 
         setContent {
-            TrackrDataTheme() {
+            TrackrDataTheme(darkTheme = false) {
                 TrackrApp()
             }
         }
