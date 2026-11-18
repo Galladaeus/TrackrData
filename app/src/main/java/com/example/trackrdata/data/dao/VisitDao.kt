@@ -24,6 +24,9 @@ interface VisitDao {
     @Insert
     suspend fun insertVisits(vararg visits: Visit)
 
+    @Insert
+    suspend fun insertVisit(visit: Visit): Long
+
     @Delete
     suspend fun delete(visit: Visit)
 
@@ -53,4 +56,18 @@ interface VisitDao {
         WHERE departed_at IS NULL
     """)
     suspend fun endActiveVisits(departedAt: Long): Int
+
+    @Query("""
+        UPDATE visit
+        SET departed_at = :departedAt,
+            notes = CASE
+                WHEN notes = '' THEN :note
+                ELSE notes || char(10) || :note
+            END
+        WHERE uid = :visitId
+            AND manual_entry = 0
+            AND departed_at IS NULL
+            AND arrived_at <= :departedAt
+    """)
+    suspend fun finishAutomaticVisit(visitId: Long, departedAt: Long, note: String) : Int
 }

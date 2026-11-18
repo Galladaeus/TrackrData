@@ -29,4 +29,8 @@ interface TrackingRepository {
     fun getLocationSamplesStream(sessionId: Long): Flow<List<LocationSample>>
 
     fun getLocationSampleCountStream(sessionId: Long): Flow<Int>
+
+    suspend fun beginAutomaticVisit(locationId: Int, arrivedAt: Long): Long
+
+    suspend fun finishAutomaticVisit(visitId: Long, departedAt: Long, note: String)
 }

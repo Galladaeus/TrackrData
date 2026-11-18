@@ -10,6 +10,7 @@ import com.example.trackrdata.data.repositories.TrackingRepository
 import com.example.trackrdata.ui.screens.LocationEntryUiState
 import com.example.trackrdata.ui.screens.TrackingUiState
 import com.example.trackrdata.ui.screens.VisitEntryUiState
+import com.example.trackrdata.utils.AutomaticVisitRecorder
 import com.example.trackrdata.utils.VisitCandidate
 import com.example.trackrdata.utils.VisitDetectionState
 import com.example.trackrdata.utils.VisitDetector
@@ -150,6 +151,13 @@ class TrackingViewModel(
     }
 
     fun startVisit(locationId: Int) {
+        if (_tracking.value.isTracking){
+            _visitEntry.value = _visitEntry.value.copy(
+                message = "Stop automatic tracking before using manual visits"
+            )
+            return
+        }
+
         if (_visitEntry.value.isSaving) return
 
         _visitEntry.value = VisitEntryUiState(
@@ -178,6 +186,11 @@ class TrackingViewModel(
     }
 
     fun endVisit(visitId: Int) {
+        if (_tracking.value.isTracking) {
+            _departureError.value = "Stop automatic tracking before using manual visits"
+            return
+        }
+
         viewModelScope.launch {
             val departedAt = System.currentTimeMillis()
 
@@ -201,6 +214,7 @@ class TrackingViewModel(
         val sessionId = UUID.randomUUID().mostSignificantBits
 
         val detector = VisitDetector()
+        val recorder = AutomaticVisitRecorder(repository)
         _visitDetection.value = VisitDetectionState()
 
         _tracking.value = TrackingUiState(
@@ -223,7 +237,12 @@ class TrackingViewModel(
 
                         repository.insertLocationSample(sample)
 
-                        _visitDetection.value = detector.process(sample, locations.value)
+                        val detection = detector.process(
+                            sample = sample,
+                            locations = locations.value
+                        )
+                        recorder.process(detection)
+                        _visitDetection.value = detection
 
                         _tracking.value = _tracking.value.copy(
                             samplesRecorded = _tracking.value.samplesRecorded + 1,
@@ -238,9 +257,17 @@ class TrackingViewModel(
                     message = "Tracking stopped because of an error."
                 )
             } finally {
-                _tracking.value = _tracking.value.copy(
-                    isTracking = false
-                )
+                try {
+                    recorder.finishSession()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _tracking.value = _tracking.value.copy(
+                        message = "Tracking stopped because of an error."
+                    )
+                } finally {
+                    _tracking.value = _tracking.value.copy( isTracking = false )
+                }
             }
         }
     }

@@ -228,7 +228,7 @@ private fun distanceMeters(
 
     val lat1 = lat1 * radians
     val lat2 = lat2 * radians
-    val latDifference = (lat2 - lat1) * radians
+    val latDifference = (lat2 - lat1)
     val lonDifference = (lon2 - lon1) * radians
 
     val a = (

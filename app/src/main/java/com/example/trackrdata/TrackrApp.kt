@@ -162,7 +162,9 @@ fun TrackrApp(
                             modifier = Modifier.padding(8.dp)
                         )
 
-                        if (active?.hasObservationGap == true) { Text("Some observations were missing or inaccurate") }
+                        if (active?.hasObservationGap == true) {
+                            Text("Some observations were missing or inaccurate")
+                        }
 
                         visitDetection.lastDeparture?.let { departure ->
                             val place = locations.firstOrNull { it.uid == departure.locationId }

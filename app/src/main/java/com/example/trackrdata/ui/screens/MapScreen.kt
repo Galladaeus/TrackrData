@@ -134,6 +134,7 @@ fun MapScreen(
 
     MapView(
         arcGISMap = map,
+        mapViewProxy = mapViewProxy,
         graphicsOverlays = listOf(graphicsOverlay, samplesOverlay),
         modifier = modifier.fillMaxSize()
     )

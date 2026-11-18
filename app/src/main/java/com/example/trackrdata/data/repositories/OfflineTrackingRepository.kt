@@ -39,9 +39,7 @@ class OfflineTrackingRepository(
                 )
 
             val now = System.currentTimeMillis()
-
             val activeVisits = visitDao.getActiveVisits()
-
             check(activeVisits.all { it.arrivedAt <= now }) {
                 "An ongoing visit has an arrival time in the future."
             }
@@ -66,6 +64,33 @@ class OfflineTrackingRepository(
             "Visit could not be ended. It may already be complete, " +
                     "missing, or have an arrival time after the departure"
         }
+    }
+
+    override suspend fun beginAutomaticVisit(locationId: Int, arrivedAt: Long): Long {
+        return database.withTransaction {
+            val location = locationDao.getById(locationId)
+                ?: throw IllegalArgumentException("Location no longer exists.")
+
+            check(visitDao.getActiveVisits().isEmpty()) {
+                "End existing visits before starting automatic visits."
+            }
+
+            visitDao.insertVisit(
+                Visit(
+                    name = location.name,
+                    locationUid = location.uid,
+                    arrivedAt = arrivedAt,
+                    manualEntry = false,
+                    notes = "Arrival estimated from qualifying GPS readings"
+                )
+            )
+        }
+    }
+
+    override suspend fun finishAutomaticVisit(visitId: Long, departedAt: Long, note: String) {
+        val updatedRows = visitDao.finishAutomaticVisit(visitId, departedAt, note)
+
+        check(updatedRows == 1) { "The automatic visit could not be completed" }
     }
 
     override suspend fun insertLocationSample(sample: LocationSample): Long = locationSampleDao.insert(sample)
