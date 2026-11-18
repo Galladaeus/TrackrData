@@ -11,15 +11,7 @@ interface TrackingRepository {
 
     fun getAllVisitsStream(): Flow<List<Visit>>
 
-    fun getLocationStream(id: Int): Flow<Location?>
-
-    fun observeVisitsForLocation(locationId: Int): Flow<List<Visit>>
-
     suspend fun insertLocation(location: Location)
-
-    suspend fun deleteLocation(location: Location)
-
-    suspend fun updateLocation(location: Location)
 
     suspend fun recordVisit(locationId: Int)
 
@@ -28,8 +20,6 @@ interface TrackingRepository {
     suspend fun insertLocationSample(sample: LocationSample): Long
 
     fun getLocationSamplesStream(sessionId: Long): Flow<List<LocationSample>>
-
-    fun getLocationSampleCountStream(sessionId: Long): Flow<Int>
 
     suspend fun beginAutomaticVisit(locationId: Int, arrivedAt: Long): Long
 

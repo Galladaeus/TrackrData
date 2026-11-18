@@ -2,8 +2,6 @@ package com.example.trackrdata.data.repositories
 
 import androidx.room.withTransaction
 import com.example.trackrdata.data.AppDatabase
-import com.example.trackrdata.data.dao.LocationDao
-import com.example.trackrdata.data.dao.VisitDao
 import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.LocationSample
 import com.example.trackrdata.data.entities.Visit
@@ -21,16 +19,7 @@ class OfflineTrackingRepository(
 
     override fun getAllVisitsStream(): Flow<List<Visit>> = visitDao.observeAll()
 
-    override fun getLocationStream(id: Int): Flow<Location?> = locationDao.observedById(id)
-
-    override fun observeVisitsForLocation(locationId: Int): Flow<List<Visit>> =
-        visitDao.observeVisitsForLocation(locationId)
-
     override suspend fun insertLocation(location: Location) = locationDao.insertLocations(location)
-
-    override suspend fun deleteLocation(location: Location) = locationDao.delete(location)
-
-    override suspend fun updateLocation(location: Location) = locationDao.update(location)
 
     override suspend fun recordVisit(locationId: Int) {
         database.withTransaction {
@@ -100,5 +89,4 @@ class OfflineTrackingRepository(
 
     override fun getLocationSamplesStream(sessionId: Long): Flow<List<LocationSample>> = locationSampleDao.observeForSession(sessionId)
 
-    override fun getLocationSampleCountStream(sessionId: Long): Flow<Int> = locationSampleDao.observeCountForSession(sessionId)
 }

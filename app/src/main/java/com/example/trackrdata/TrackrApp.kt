@@ -2,6 +2,7 @@
 
 package com.example.trackrdata
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,8 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -24,10 +27,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +50,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.trackrdata.ui.AppViewModelProvider
+import com.example.trackrdata.ui.screens.InsightsScreen
 import com.example.trackrdata.ui.screens.LocationsScreen
 import com.example.trackrdata.ui.screens.MapScreen
 import com.example.trackrdata.ui.screens.TrackingControls
@@ -52,7 +61,8 @@ import com.example.trackrdata.ui.viewModels.TrackingViewModel
 private enum class AppDestination {
     Map,
     Locations,
-    Visits
+    Visits,
+    Insights
 }
 
 @Composable
@@ -66,6 +76,7 @@ fun TrackrApp(
     val locations by trackingViewModel.locations.collectAsStateWithLifecycle()
     val visits by trackingViewModel.visits.collectAsStateWithLifecycle()
     val locationSummaries by trackingViewModel.locationSummaries.collectAsStateWithLifecycle()
+    val nearbySuggestions by trackingViewModel.nearbySuggestions.collectAsStateWithLifecycle()
 
     val departureError by trackingViewModel.departureError.collectAsStateWithLifecycle()
 
@@ -95,11 +106,11 @@ fun TrackrApp(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Place,
+                        Image(
+                            painter = painterResource(R.drawable.trackr_logo),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(30.dp)
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(36.dp)
                         )
 
                         Text(
@@ -122,6 +133,7 @@ fun TrackrApp(
                         AppDestination.Map -> Icons.Default.Place
                         AppDestination.Locations -> Icons.AutoMirrored.Filled.List
                         AppDestination.Visits -> Icons.Default.DateRange
+                        AppDestination.Insights -> Icons.Default.Info
                     }
 
                     NavigationBarItem(
@@ -162,6 +174,10 @@ fun TrackrApp(
                 .padding(innerPadding)
         ) {
             composable(route = AppDestination.Map.name) {
+                var showHeatmap by rememberSaveable {
+                    mutableStateOf(false)
+                }
+
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -170,6 +186,7 @@ fun TrackrApp(
                         locations = locations,
                         visits = visits,
                         samples = visibleSamples,
+                        showHeatmap = showHeatmap,
                         modifier = Modifier.fillMaxSize()
                     )
 
@@ -179,6 +196,25 @@ fun TrackrApp(
                         onStop = trackingViewModel::stopTracking,
                         modifier = Modifier.matchParentSize()
                     ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = !showHeatmap,
+                                onClick = { showHeatmap = false },
+                                label = { Text("Markers") }
+                            )
+
+                            FilterChip(
+                                selected = showHeatmap,
+                                onClick = { showHeatmap = true },
+                                label = { Text("Heatmap") }
+                            )
+                        }
+
+                        if (showHeatmap) {
+                            Text("Recorded visit concentration")
+                            Text("All time · Includes ongoing visits")
+                        }
+
                         if (tracking.isTracking) {
                             val active = visitDetection.activeVisit
                             val candidate = visitDetection.candidate
@@ -235,6 +271,12 @@ fun TrackrApp(
                     onStartVisit = trackingViewModel::startVisit,
                     onEndVisit = trackingViewModel::endVisit,
                     departureError = departureError
+                )
+            }
+            composable(route = AppDestination.Insights.name) {
+                InsightsScreen(
+                    locationSummaries = locationSummaries,
+                    suggestions = nearbySuggestions
                 )
             }
         }

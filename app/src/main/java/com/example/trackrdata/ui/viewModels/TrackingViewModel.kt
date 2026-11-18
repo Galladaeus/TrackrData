@@ -7,6 +7,7 @@ import com.example.trackrdata.data.entities.LocationSample
 import com.example.trackrdata.data.entities.Visit
 import com.example.trackrdata.data.location.CurrentLocationProvider
 import com.example.trackrdata.data.models.LocationSummary
+import com.example.trackrdata.data.models.NearbySuggestion
 import com.example.trackrdata.data.repositories.TrackingRepository
 import com.example.trackrdata.ui.screens.state.LocationEntryUiState
 import com.example.trackrdata.ui.screens.state.TrackingUiState
@@ -14,6 +15,7 @@ import com.example.trackrdata.ui.screens.state.VisitEntryUiState
 import com.example.trackrdata.utils.AutomaticVisitRecorder
 import com.example.trackrdata.utils.VisitDetectionState
 import com.example.trackrdata.utils.VisitDetector
+import com.example.trackrdata.utils.buildNearbySuggestions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -73,6 +75,17 @@ class TrackingViewModel(
             initialValue = emptyList()
         )
 
+    val nearbySuggestions: StateFlow<List<NearbySuggestion>> =
+        locationSummaries
+            .map { summaries ->
+                buildNearbySuggestions(summaries)
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val trackingSamples: StateFlow<List<LocationSample>> =
         tracking
@@ -105,7 +118,6 @@ class TrackingViewModel(
         }
 
         _locationEntry.value = current.copy(
-            coordinates = null,
             isCapturing = true,
             isSaving = false,
             message = null
@@ -123,7 +135,7 @@ class TrackingViewModel(
                 }
 
                 _locationEntry.value = _locationEntry.value.copy(
-                    isCapturing = true,
+                    isCapturing = false,
                     isSaving = true
                 )
 
@@ -200,17 +212,14 @@ class TrackingViewModel(
 
         viewModelScope.launch {
             val departedAt = System.currentTimeMillis()
+            _departureError.value = null
 
-            viewModelScope.launch {
-                _departureError.value = null
-
-                try {
-                    repository.endVisit(visitId, departedAt)
-                } catch (e: CancellationException) {
-                  throw e
-                } catch (e: Exception) {
-                    _departureError.value = "Could not save departure. Please try again."
-                }
+            try {
+                repository.endVisit(visitId, departedAt)
+            } catch (e: CancellationException) {
+              throw e
+            } catch (e: Exception) {
+                _departureError.value = "Could not save departure. Please try again."
             }
         }
     }
@@ -253,7 +262,6 @@ class TrackingViewModel(
 
                         _tracking.value = _tracking.value.copy(
                             samplesRecorded = _tracking.value.samplesRecorded + 1,
-                            lastCoordinates = coordinates,
                             message = null
                         )
                     }

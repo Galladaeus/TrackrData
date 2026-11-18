@@ -11,8 +11,7 @@ data class VisitCandidate(
     val locationId: Int,
     val firstObservedAt: Long,
     val lastObservedAt: Long,
-    val sampleCount: Int,
-    val isConfirmed: Boolean
+    val sampleCount: Int
 )
 
 data class ActiveVisitDetection(
@@ -171,8 +170,7 @@ class VisitDetector(
                     locationId = location.uid,
                     firstObservedAt = sample.recordedAt,
                     lastObservedAt = sample.recordedAt,
-                    sampleCount = 1,
-                    isConfirmed = false
+                    sampleCount = 1
                 )
             }
 

@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            TrackrDataTheme(darkTheme = false) {
+            TrackrDataTheme(darkTheme = true) {
                 TrackrApp()
             }
         }

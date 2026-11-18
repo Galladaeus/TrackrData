@@ -138,8 +138,6 @@ fun LocationsScreen(
                     items = locationSummaries,
                     key = { it.location.uid }
                 ) { summary ->
-                    val location = summary.location
-
                     LocationSummaryCard(summary = summary)
                 }
             }
