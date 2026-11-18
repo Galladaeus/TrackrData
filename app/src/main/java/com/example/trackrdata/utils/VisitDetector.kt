@@ -45,7 +45,7 @@ data class VisitDetectionState(
  * @property dwellMillis minimum time in milliseconds to consider a location a visit (default 2 minutes)
  * @property departureDwellMillis minimum time in milliseconds in which user is considered to have departed
  * @property maximumGapMillis maximum time in milliseconds between readings
- * @property requiredSampleCount the number of samples required to consider a visit
+ * @property requiredSampleCount the number of samples required to consider a visit or a departure
  */
 class VisitDetector(
     private val radiusMeters: Double = 100.0,
@@ -54,7 +54,7 @@ class VisitDetector(
     private val dwellMillis: Long = 120_000L,
     private val departureDwellMillis: Long = 60_000L,
     private val maximumGapMillis: Long = 30_000L,
-    private val requiredSampleCount: Int = 3
+    private val requiredSampleCount: Int = 2
 ) {
     private var candidate: VisitCandidate? = null
     private var activeVisit: ActiveVisitDetection? = null

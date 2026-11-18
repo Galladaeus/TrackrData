@@ -126,7 +126,11 @@ fun MapScreen(
 
             val markerSymbol = SimpleMarkerSymbol(
                 SimpleMarkerSymbolStyle.Circle,
-                Color.fromRgba(255, 0, 0, 100),
+                color = if(visitCount == 0) {
+                    Color.fromRgba(0, 180, 50, 100)
+                } else {
+                    Color.fromRgba(255, 0, 0, 100)
+                },
                 markerSize
             )
 

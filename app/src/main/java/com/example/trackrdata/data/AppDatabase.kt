@@ -28,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
+                    .createFromAsset("databases/demo.db")
                     .build()
                     .also { Instance = it }
             }
