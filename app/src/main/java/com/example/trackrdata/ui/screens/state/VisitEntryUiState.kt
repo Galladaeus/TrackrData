@@ -1,4 +1,4 @@
-package com.example.trackrdata.ui.screens
+package com.example.trackrdata.ui.screens.state
 
 data class VisitEntryUiState (
     val isSaving: Boolean = false,

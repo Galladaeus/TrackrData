@@ -8,41 +8,50 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.trackrdata.data.entities.Location
-import com.example.trackrdata.data.location.CurrentCoordinates
-import com.example.trackrdata.data.location.CurrentLocationProvider
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import com.example.trackrdata.data.models.LocationSummary
+import com.example.trackrdata.ui.screens.state.LocationEntryUiState
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun LocationsScreen(
-    locations: List<Location>,
+    locationSummaries: List<LocationSummary>,
     entryState: LocationEntryUiState,
     onAddLocation: (String) -> Unit
 ) {
@@ -73,6 +82,9 @@ fun LocationsScreen(
         }
     }
 
+    val totalVisits = locationSummaries.sumOf { it.visitCount }
+    val visitedPlaces = locationSummaries.count { it.visitCount > 0 }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -82,9 +94,16 @@ fun LocationsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Text(text = "Locations", style = MaterialTheme.typography.headlineLarge)
             Text(
-                "Enter location name to add current location."
+                text = "$totalVisits recorded visits · $visitedPlaces visited places",
+                style = MaterialTheme.typography.bodyLarge
             )
+            Text(
+                text = "All time · Most visited first",
+                style = MaterialTheme.typography.labelMedium
+            )
+            Text("Enter location name to add current location.")
 
             entryState.message?.let { message ->
                 Text(message)
@@ -106,7 +125,7 @@ fun LocationsScreen(
                 )
             }
 
-            if (locations.isEmpty()) {
+            if (locationSummaries.isEmpty()) {
                 Text("No saved locations yet.")
             }
 
@@ -115,20 +134,13 @@ fun LocationsScreen(
                 contentPadding = PaddingValues(bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(items = locations, key = { it.uid }) { location ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column (
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(text = location.name)
-                            Text(text = location.category)
-                            Text(text = location.address)
-                            Text("${location.latitude}, ${location.longitude}")
-                        }
-                    }
+                items(
+                    items = locationSummaries,
+                    key = { it.location.uid }
+                ) { summary ->
+                    val location = summary.location
+
+                    LocationSummaryCard(summary = summary)
                 }
             }
         }
@@ -191,4 +203,116 @@ fun LocationsScreen(
             }
         )
     }
+}
+
+@Composable
+private fun LocationSummaryCard(summary: LocationSummary) {
+    val location = summary.location
+
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ) {
+                    Box(
+                        modifier = Modifier.size(44.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Place,
+                            contentDescription = null,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = location.name,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(
+                        text = location.category,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (location.address.isNotBlank()) {
+                        Text(
+                            text = location.address,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                LocationMetadata(
+                    icon = Icons.Default.DateRange,
+                    text = "${summary.visitCount} " + if (summary.visitCount == 1) "visit" else "visits",
+                    modifier = Modifier.weight(1f)
+                )
+
+                LocationMetadata(
+                    icon = Icons.Default.Refresh,
+                    text = formatLastVisited(summary.lastVisitedAt),
+                    modifier = Modifier.weight(2f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocationMetadata(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private fun formatLastVisited(timestamp: Long?): String {
+    if (timestamp == null) return "Not visited yet"
+
+    val date = Instant.ofEpochMilli(timestamp)
+        .atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+
+    return "Last visited $date"
 }

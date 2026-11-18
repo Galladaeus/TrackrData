@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.Visit
+import com.example.trackrdata.ui.screens.state.VisitEntryUiState
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -291,7 +293,7 @@ private fun VisitLocationIcon() {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Place,
+                imageVector = Icons.Default.DateRange,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp)
             )

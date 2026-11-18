@@ -6,12 +6,12 @@ import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.LocationSample
 import com.example.trackrdata.data.entities.Visit
 import com.example.trackrdata.data.location.CurrentLocationProvider
+import com.example.trackrdata.data.models.LocationSummary
 import com.example.trackrdata.data.repositories.TrackingRepository
-import com.example.trackrdata.ui.screens.LocationEntryUiState
-import com.example.trackrdata.ui.screens.TrackingUiState
-import com.example.trackrdata.ui.screens.VisitEntryUiState
+import com.example.trackrdata.ui.screens.state.LocationEntryUiState
+import com.example.trackrdata.ui.screens.state.TrackingUiState
+import com.example.trackrdata.ui.screens.state.VisitEntryUiState
 import com.example.trackrdata.utils.AutomaticVisitRecorder
-import com.example.trackrdata.utils.VisitCandidate
 import com.example.trackrdata.utils.VisitDetectionState
 import com.example.trackrdata.utils.VisitDetector
 import kotlinx.coroutines.CancellationException
@@ -61,6 +61,13 @@ class TrackingViewModel(
 
     val visits: StateFlow<List<Visit>> =
         repository.getAllVisitsStream().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    val locationSummaries: StateFlow<List<LocationSummary>> =
+        repository.getLocationSummariesStream().stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()

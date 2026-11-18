@@ -22,7 +22,7 @@ import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.LocationSample
 import com.example.trackrdata.data.entities.Visit
 
-val STARTING_SCALE = 30_000.0
+const val STARTING_SCALE = 30_000.0
 
 fun createMap(): ArcGISMap {
     return ArcGISMap(BasemapStyle.ArcGISTopographic).apply {

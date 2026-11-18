@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.LocationWithVisits
+import com.example.trackrdata.data.models.LocationSummary
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -43,4 +44,21 @@ interface LocationDao {
 
     @Query("SELECT * FROM location WHERE uid = :id")
     suspend fun getById(id: Int): Location?
+
+    @Query("""
+        SELECT
+            l.*,
+            COUNT(v.uid) AS visit_count,
+            MAX(v.arrived_at) AS last_visited_at
+        FROM location AS l
+        LEFT JOIN visit AS v 
+            ON v.location_uid = l.uid
+        GROUP BY l.uid
+        ORDER BY
+            visit_count DESC,
+            last_visited_at DESC,
+            l.name COLLATE NOCASE ASC,
+            l.uid ASC
+    """)
+    fun observeLocationSummaries(): Flow<List<LocationSummary>>
 }

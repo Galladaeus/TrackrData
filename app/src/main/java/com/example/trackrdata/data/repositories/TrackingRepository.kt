@@ -3,6 +3,7 @@ package com.example.trackrdata.data.repositories
 import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.LocationSample
 import com.example.trackrdata.data.entities.Visit
+import com.example.trackrdata.data.models.LocationSummary
 import kotlinx.coroutines.flow.Flow
 
 interface TrackingRepository {
@@ -33,4 +34,6 @@ interface TrackingRepository {
     suspend fun beginAutomaticVisit(locationId: Int, arrivedAt: Long): Long
 
     suspend fun finishAutomaticVisit(visitId: Long, departedAt: Long, note: String)
+
+    fun getLocationSummariesStream(): Flow<List<LocationSummary>>
 }

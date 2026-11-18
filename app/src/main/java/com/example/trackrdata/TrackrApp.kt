@@ -56,6 +56,7 @@ fun TrackrApp(
 
     val locations by trackingViewModel.locations.collectAsStateWithLifecycle()
     val visits by trackingViewModel.visits.collectAsStateWithLifecycle()
+    val locationSummaries by trackingViewModel.locationSummaries.collectAsStateWithLifecycle()
 
     val departureError by trackingViewModel.departureError.collectAsStateWithLifecycle()
 
@@ -184,7 +185,7 @@ fun TrackrApp(
             }
             composable(route = AppDestination.Locations.name) {
                 LocationsScreen(
-                    locations = locations,
+                    locationSummaries = locationSummaries,
                     entryState = locationEntry,
                     onAddLocation = trackingViewModel::addCurrentLocation
                 )

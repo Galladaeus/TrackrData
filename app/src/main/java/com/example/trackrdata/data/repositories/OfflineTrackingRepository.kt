@@ -7,6 +7,7 @@ import com.example.trackrdata.data.dao.VisitDao
 import com.example.trackrdata.data.entities.Location
 import com.example.trackrdata.data.entities.LocationSample
 import com.example.trackrdata.data.entities.Visit
+import com.example.trackrdata.data.models.LocationSummary
 import kotlinx.coroutines.flow.Flow
 
 class OfflineTrackingRepository(
@@ -92,6 +93,8 @@ class OfflineTrackingRepository(
 
         check(updatedRows == 1) { "The automatic visit could not be completed" }
     }
+
+    override fun getLocationSummariesStream(): Flow<List<LocationSummary>> = locationDao.observeLocationSummaries()
 
     override suspend fun insertLocationSample(sample: LocationSample): Long = locationSampleDao.insert(sample)
 
