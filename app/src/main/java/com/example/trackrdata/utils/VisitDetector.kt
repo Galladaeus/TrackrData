@@ -51,10 +51,10 @@ class VisitDetector(
     private val radiusMeters: Double = 100.0,
     private val exitRadiusMeters: Double = 150.0,
     private val maximumAccuracyMeters: Float = 50f,
-    private val dwellMillis: Long = 120_000L,
-    private val departureDwellMillis: Long = 60_000L,
+    private val dwellMillis: Long = 45_000L,
+    private val departureDwellMillis: Long = 30_000L,
     private val maximumGapMillis: Long = 30_000L,
-    private val requiredSampleCount: Int = 2
+    private val requiredSampleCount: Int = 3
 ) {
     private var candidate: VisitCandidate? = null
     private var activeVisit: ActiveVisitDetection? = null
